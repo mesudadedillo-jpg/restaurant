@@ -41,7 +41,7 @@ function activarTiempoReal() {
 }
 
 async function cargarProductos() {
-  const { data, error } = await supabase
+  const { data, error } = await db // <--- Cambiado de supabase a db
     .from("productos")
     .select("*")
     .order("created_at", { ascending: false });
