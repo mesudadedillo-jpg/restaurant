@@ -1,201 +1,271 @@
 // js/productos.js
 
-// Hacemos las funciones globales para que los botones del HTML (onclick) las encuentren
-window.crearProducto = crearProducto;
-window.registrarVenta = registrarVenta;
+// Funciones globales para que el HTML pueda acceder a ellas
+window.guardarProducto = guardarProducto;
 window.eliminarProducto = eliminarProducto;
-window.mostrarSeccion = mostrarSeccion;
+window.cambiarSeccion = cambiarSeccion;
+window.agregarAlCarrito = agregarAlCarrito;
+window.finalizarVenta = finalizarVenta;
+window.vaciarCarrito = vaciarCarrito;
+window.cerrarModal = cerrarModal;
+
+let carrito = [];
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Asignamos eventos a los botones principales
-  const btnGuardar = document.getElementById("btnGuardar");
-  const btnVender = document.getElementById("btnVender");
-
-  if (btnGuardar) btnGuardar.addEventListener("click", crearProducto);
-  if (btnVender) btnVender.addEventListener("click", registrarVenta);
-
-  // Carga inicial de datos
   cargarProductos();
   cargarVentas();
   activarTiempoReal();
 });
 
+// --- NAVEGACIÓN ---
+function cambiarSeccion(objetivo) {
+  document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  
+  document.getElementById(objetivo).classList.add('active');
+  document.getElementById('nav-' + objetivo).classList.add('active');
+}
+
+// --- TIEMPO REAL ---
 function activarTiempoReal() {
-  // Escuchamos cambios en la base de datos de Supabase usando el alias 'db'
-  const canal = db.channel("cambios-en-vivo");
+  const canal = db.channel("realtime-abarrotes");
 
   canal
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "productos" },
-      (payload) => {
-        console.log("Cambio detectado en productos:", payload);
-        cargarProductos(); 
-      }
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "ventas" },
-      (payload) => {
-        console.log("Cambio detectado en ventas:", payload);
-        cargarVentas(); 
-      }
-    )
+    .on("postgres_changes", { event: "*", schema: "public", table: "productos" }, () => {
+      cargarProductos();
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: "ventas" }, () => {
+      cargarVentas();
+    })
     .subscribe();
 }
 
+// --- GESTIÓN DE PRODUCTOS (INVENTARIO) ---
 async function cargarProductos() {
-  const { data, error } = await db // <--- Unificado a db
+  const { data, error } = await db
     .from("productos")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("nombre", { ascending: true });
 
-  if (error) return console.error("Error cargando productos:", error);
+  if (error) return console.error(error);
 
-  const contenedor = document.getElementById("listaProductos");
-  const selectVenta = document.getElementById("productoVenta");
+  renderizarInventario(data);
+  renderizarPOS(data);
+}
 
-  contenedor.innerHTML = "";
-  selectVenta.innerHTML = "";
+function renderizarInventario(productos) {
+  const tabla = document.getElementById("tabla-inventario");
+  tabla.innerHTML = "";
 
-  data.forEach(p => {
-    const ganancia = p.precio - p.costo;
+  productos.forEach(p => {
+    const estadoClass = p.stock <= 0 ? 'stock-agotado' : (p.stock <= 5 ? 'stock-bajo' : '');
+    const estadoText = p.stock <= 0 ? 'Agotado' : (p.stock <= 5 ? 'Bajo Stock' : 'Disponible');
 
-    const item = document.createElement("div");
-    item.className = "producto-item";
-    item.innerHTML = `
-      <strong>${p.nombre}</strong>
-      | Precio: $${p.precio}
-      | Stock: ${p.stock}
-      | Ganancia: $${ganancia}
-      <button onclick="eliminarProducto('${p.id}')" style="color:red">Eliminar</button>
+    const fila = document.createElement("tr");
+    fila.innerHTML = `
+      <td>${p.nombre}</td>
+      <td>$${p.precio}</td>
+      <td>$${p.costo || 0}</td>
+      <td class="${estadoClass}">${p.stock}</td>
+      <td><span class="${estadoClass}">${estadoText}</span></td>
+      <td class="acciones">
+        <button class="btn btn-warning btn-sm" onclick="prepararEdicion('${p.id}', '${p.nombre}', ${p.precio}, ${p.costo}, ${p.stock})">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${p.id}')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
     `;
-    contenedor.appendChild(item);
-
-    const option = document.createElement("option");
-    option.value = p.id;
-    option.textContent = p.nombre;
-    selectVenta.appendChild(option);
+    tabla.appendChild(fila);
   });
 }
 
-async function cargarVentas() {
-  const { data, error } = await db // <--- Unificado a db
-    .from("ventas")
-    .select("*, productos(nombre, costo)");
+async function guardarProducto() {
+  const id = document.getElementById("prod-id").value;
+  const nombre = document.getElementById("prod-nombre").value.trim();
+  const precio = parseFloat(document.getElementById("prod-precio").value);
+  const costo = parseFloat(document.getElementById("prod-costo").value) || 0;
+  const stock = parseInt(document.getElementById("prod-stock").value);
 
-  if (error) return console.error("Error cargando ventas:", error);
+  if (!nombre || isNaN(precio) || isNaN(stock)) return alert("Completa los campos obligatorios");
 
-  const contenedor = document.getElementById("listaVentas");
-  const resumen = document.getElementById("resumenVentas");
+  const datos = { nombre, precio, costo, stock };
 
-  contenedor.innerHTML = "";
-
-  let totalVentas = 0;
-  let totalCostos = 0;
-
-  data.forEach(v => {
-    totalVentas += v.total;
-    if (v.productos) {
-        totalCostos += v.productos.costo * v.cantidad;
-    }
-
-    const item = document.createElement("div");
-    item.innerHTML = `
-      ${v.productos ? v.productos.nombre : 'Producto eliminado'}
-      | Cantidad: ${v.cantidad}
-      | Total: $${v.total}
-    `;
-    contenedor.appendChild(item);
-  });
-
-  const ganancia = totalVentas - totalCostos;
-
-  resumen.innerHTML = `
-    <strong>Ventas totales:</strong> $${totalVentas} <br>
-    <strong>Inversión:</strong> $${totalCostos} <br>
-    <strong>Ganancia neta:</strong> $${ganancia}
-  `;
-}
-
-async function crearProducto() {
-  const nombre = document.getElementById("nombre").value.trim();
-  const precio = parseFloat(document.getElementById("precio").value);
-  const costo = parseFloat(document.getElementById("costo").value);
-  const stock = parseInt(document.getElementById("stock").value);
-
-  if (!nombre || isNaN(precio) || isNaN(costo) || isNaN(stock)) {
-      return alert("Por favor completa todos los campos.");
-  }
-
-  const { error } = await db // <--- Unificado a db
-    .from("productos")
-    .insert([{ nombre, precio, costo, stock }]);
-
-  if (error) {
-      alert("Error al guardar: " + error.message);
+  let resultado;
+  if (id) {
+    resultado = await db.from("productos").update(datos).eq("id", id);
   } else {
-      limpiarCampos();
-  }
-}
-
-async function registrarVenta() {
-  const producto_id = document.getElementById("productoVenta").value;
-  const cantidad = parseInt(document.getElementById("cantidadVenta").value);
-
-  if (!producto_id || isNaN(cantidad) || cantidad <= 0) {
-      return alert("Datos de venta inválidos");
+    resultado = await db.from("productos").insert([datos]);
   }
 
-  const { data: producto, error: errProd } = await db // <--- Unificado a db
-    .from("productos")
-    .select("*")
-    .eq("id", producto_id)
-    .single();
-
-  if (errProd || !producto) return alert("Error al obtener el producto");
-
-  if (producto.stock < cantidad) {
-      return alert("No hay suficiente stock para esta venta");
+  if (resultado.error) alert("Error: " + resultado.error.message);
+  else {
+    limpiarFormulario();
+    alert("Producto guardado correctamente");
   }
-
-  const total = producto.precio * cantidad;
-
-  const { error: errVenta } = await db // <--- Unificado a db
-    .from("ventas")
-    .insert([{ producto_id, cantidad, total }]);
-
-  if (errVenta) return alert("Error al registrar venta");
-
-  await db.from("productos") // <--- Unificado a db
-    .update({ stock: producto.stock - cantidad })
-    .eq("id", producto_id);
-
-  document.getElementById("cantidadVenta").value = "";
 }
 
 async function eliminarProducto(id) {
-  if (!confirm("¿Deseas eliminar este producto de la base de datos global?")) return;
-
-  const { error } = await db // <--- Unificado a db
-    .from("productos")
-    .delete()
-    .eq("id", id);
-
-  if (error) alert("Error al eliminar: " + error.message);
+  if (!confirm("¿Eliminar este producto permanentemente?")) return;
+  const { error } = await db.from("productos").delete().eq("id", id);
+  if (error) alert(error.message);
 }
 
-function mostrarSeccion(seccion) {
-  document.getElementById("seccion-productos").style.display =
-    seccion === "productos" ? "block" : "none";
+// --- PUNTO DE VENTA (POS) ---
+function renderizarPOS(productos) {
+  const grid = document.getElementById("display-productos");
+  grid.innerHTML = "";
 
-  document.getElementById("seccion-ventas").style.display =
-    seccion === "ventas" ? "block" : "none";
+  productos.forEach(p => {
+    const sinStock = p.stock <= 0;
+    const card = document.createElement("div");
+    card.className = `producto-card ${sinStock ? 'sin-stock' : ''}`;
+    card.onclick = () => !sinStock && agregarAlCarrito(p.id, p.nombre, p.precio, p.stock);
+    
+    card.innerHTML = `
+      <div class="producto-icon"><i class="fas fa-box"></i></div>
+      <h3>${p.nombre}</h3>
+      <p class="precio">$${p.precio}</p>
+      <p class="stock">Stock: ${p.stock}</p>
+    `;
+    grid.appendChild(card);
+  });
 }
 
-function limpiarCampos() {
-  document.getElementById("nombre").value = "";
-  document.getElementById("precio").value = "";
-  document.getElementById("costo").value = "";
-  document.getElementById("stock").value = "";
+function agregarAlCarrito(id, nombre, precio, stockMax) {
+  const item = carrito.find(i => i.id === id);
+  if (item) {
+    if (item.cantidad >= stockMax) return alert("No hay más stock disponible");
+    item.cantidad++;
+  } else {
+    carrito.push({ id, nombre, precio, cantidad: 1, stockMax });
+  }
+  actualizarCarritoUI();
+}
+
+function actualizarCarritoUI() {
+  const lista = document.getElementById("lista-carrito");
+  lista.innerHTML = "";
+
+  if (carrito.length === 0) {
+    lista.innerHTML = '<div class="carrito-vacio"><p>Tu carrito está vacío</p></div>';
+    document.getElementById("total-venta").textContent = "$0.00";
+    return;
+  }
+
+  let subtotal = 0;
+  carrito.forEach(item => {
+    const totalItem = item.precio * item.cantidad;
+    subtotal += totalItem;
+    
+    const div = document.createElement("div");
+    div.className = "carrito-item";
+    div.innerHTML = `
+      <div class="carrito-item-info">
+        <div class="carrito-item-nombre">${item.nombre}</div>
+        <div class="carrito-item-precio">$${item.precio} x ${item.cantidad}</div>
+      </div>
+      <div class="carrito-item-total">$${totalItem.toFixed(2)}</div>
+    `;
+    lista.appendChild(div);
+  });
+
+  const iva = subtotal * 0.16;
+  const total = subtotal + iva;
+
+  document.getElementById("subtotal").textContent = `$${subtotal.toFixed(2)}`;
+  document.getElementById("iva").textContent = `$${iva.toFixed(2)}`;
+  document.getElementById("total-venta").textContent = `$${total.toFixed(2)}`;
+}
+
+async function finalizarVenta() {
+  if (carrito.length === 0) return alert("El carrito está vacío");
+
+  const totalVenta = parseFloat(document.getElementById("total-venta").textContent.replace('$', ''));
+
+  // Procesar cada producto del carrito
+  for (const item of carrito) {
+    // 1. Registrar venta
+    await db.from("ventas").insert([{ 
+      producto_id: item.id, 
+      cantidad: item.cantidad, 
+      total: item.precio * item.cantidad 
+    }]);
+
+    // 2. Descontar stock
+    await db.from("productos").update({ 
+      stock: item.stockMax - item.cantidad 
+    }).eq("id", item.id);
+  }
+
+  document.getElementById("modal-total").textContent = `$${totalVenta.toFixed(2)}`;
+  document.getElementById("modal-cobro").classList.add("active");
+  vaciarCarrito();
+}
+
+// --- REPORTES ---
+async function cargarVentas() {
+  const { data, error } = await db
+    .from("ventas")
+    .select("*, productos(nombre, costo)")
+    .order("created_at", { ascending: false });
+
+  if (error) return;
+
+  const tabla = document.getElementById("tabla-ventas");
+  tabla.innerHTML = "";
+
+  let hoyVentas = 0;
+  let hoyProductos = 0;
+  let hoyGanancia = 0;
+
+  data.forEach(v => {
+    hoyVentas += v.total;
+    hoyProductos += v.cantidad;
+    if(v.productos) {
+        hoyGanancia += (v.total - (v.productos.costo * v.cantidad));
+    }
+
+    const fila = document.createElement("tr");
+    fila.innerHTML = `
+      <td>#${v.id.toString().slice(0,8)}</td>
+      <td>${new Date(v.created_at).toLocaleString()}</td>
+      <td>${v.productos ? v.productos.nombre : 'Eliminado'} x${v.cantidad}</td>
+      <td>$${v.total}</td>
+      <td>$${v.productos ? (v.total - (v.productos.costo * v.cantidad)).toFixed(2) : '0.00'}</td>
+    `;
+    tabla.appendChild(fila);
+  });
+
+  document.getElementById("ventas-hoy").textContent = `$${hoyVentas.toFixed(2)}`;
+  document.getElementById("productos-vendidos").textContent = hoyProductos;
+  document.getElementById("ganancia-hoy").textContent = `$${hoyGanancia.toFixed(2)}`;
+}
+
+// --- UTILIDADES ---
+function vaciarCarrito() {
+  carrito = [];
+  actualizarCarritoUI();
+}
+
+function cerrarModal() {
+  document.getElementById("modal-cobro").classList.remove("active");
+}
+
+window.prepararEdicion = function(id, nombre, precio, costo, stock) {
+  document.getElementById("prod-id").value = id;
+  document.getElementById("prod-nombre").value = nombre;
+  document.getElementById("prod-precio").value = precio;
+  document.getElementById("prod-costo").value = costo;
+  document.getElementById("prod-stock").value = stock;
+  window.scrollTo(0, 0);
+};
+
+function limpiarFormulario() {
+  document.getElementById("prod-id").value = "";
+  document.getElementById("prod-nombre").value = "";
+  document.getElementById("prod-precio").value = "";
+  document.getElementById("prod-costo").value = "";
+  document.getElementById("prod-stock").value = "";
 }
