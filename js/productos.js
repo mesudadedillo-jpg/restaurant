@@ -21,23 +21,27 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function activarTiempoReal() {
-  // Usamos el cliente global de Supabase
-  const canal = supabase.channel("realtime-restaurante");
+  // Escuchamos cambios en la base de datos de Supabase
+  const canal = db.channel("cambios-en-vivo");
 
   canal
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "productos" },
-      () => cargarProductos()
+      (payload) => {
+        console.log("Cambio detectado en productos:", payload);
+        cargarProductos(); // Se ejecuta solo, sin refrescar la página
+      }
     )
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "ventas" },
-      () => cargarVentas()
+      (payload) => {
+        console.log("Cambio detectado en ventas:", payload);
+        cargarVentas(); // Actualiza totales y lista de ventas al instante
+      }
     )
-    .subscribe(status => {
-      console.log("Estado realtime:", status);
-    });
+    .subscribe();
 }
 
 async function cargarProductos() {
@@ -199,3 +203,4 @@ function limpiarCampos() {
   document.getElementById("costo").value = "";
   document.getElementById("stock").value = "";
 }
+
