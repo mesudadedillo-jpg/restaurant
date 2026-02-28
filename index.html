@@ -2,59 +2,700 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Restaurante App</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abarrotes Manager Pro</title>
+    <!-- Fuente bonita de Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        :root {
+            --primary: #10b981; /* Verde esmeralda */
+            --dark: #1f2937;
+            --light: #f3f4f6;
+            --white: #ffffff;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            min-height: 100vh;
+        }
+
+        /* Header y Navegación */
+        header {
+            background-color: var(--white);
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        nav {
+            display: flex;
+            gap: 5px;
+        }
+
+        nav button {
+            background: none;
+            border: none;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #6b7280;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        nav button:hover {
+            background-color: #f3f4f6;
+            color: var(--primary);
+        }
+
+        nav button.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        /* Contenedor Principal */
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        /* Secciones */
+        .seccion {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .seccion.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Tarjetas */
+        .card {
+            background: var(--white);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header h2 {
+            font-size: 1.25rem;
+            color: var(--dark);
+        }
+
+        /* Formularios */
+        .grid-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        input, select {
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Botones */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #059669;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        .btn-warning {
+            background-color: var(--warning);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+
+        /* Grid de Productos (POS) */
+        .pos-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .pos-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .productos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        .producto-card {
+            background: white;
+            padding: 1.25rem;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .producto-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .producto-card.sin-stock {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .producto-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .producto-card h3 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .producto-card .precio {
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .producto-card .stock {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-top: 5px;
+        }
+
+        /* Carrito */
+        .carrito {
+            background: var(--dark);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            height: fit-content;
+            position: sticky;
+            top: 100px;
+        }
+
+        .carrito-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #374151;
+        }
+
+        .carrito-header h2 {
+            font-size: 1.25rem;
+        }
+
+        .carrito-items {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .carrito-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #374151;
+        }
+
+        .carrito-item-info {
+            flex: 1;
+        }
+
+        .carrito-item-nombre {
+            font-weight: 500;
+        }
+
+        .carrito-item-precio {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+
+        .carrito-item-cantidad {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 15px;
+        }
+
+        .carrito-item-cantidad button {
+            background: #374151;
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .carrito-item-cantidad button:hover {
+            background: var(--primary);
+        }
+
+        .carrito-item-total {
+            font-weight: bold;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .carrito-vacio {
+            text-align: center;
+            padding: 2rem;
+            color: #9ca3af;
+        }
+
+        .carrito-footer {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #374151;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .total-final {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .btn-cobrar {
+            width: 100%;
+            margin-top: 1rem;
+            padding: 15px;
+            font-size: 1.1rem;
+            background: var(--primary);
+        }
+
+        .btn-cobrar:hover {
+            background: #059669;
+        }
+
+        /* Tabla de Inventario */
+        .tabla-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background-color: #f9fafb;
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        tr:hover {
+            background-color: #f9fafb;
+        }
+
+        .stock-bajo {
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        .stock-agotado {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .acciones {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .modal-content p {
+            margin-bottom: 0.5rem;
+            color: #6b7280;
+        }
+
+        .modal-total {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--dark);
+            margin: 1rem 0;
+        }
+
+        /* Notificaciones */
+        .notificacion {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+            z-index: 1001;
+        }
+
+        .notificacion.show {
+            transform: translateX(0);
+        }
+
+        .notificacion.success {
+            background-color: var(--primary);
+        }
+
+        .notificacion.error {
+            background-color: var(--danger);
+        }
+
+        /* Resumen de Ventas */
+        .resumen-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .resumen-card {
+            background: linear-gradient(135deg, var(--primary), #059669);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .resumen-card h3 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .resumen-card p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
-<h1>Panel Restaurante</h1>
+<body>
 
-<nav>
-  <button onclick="mostrarSeccion('productos')">Productos</button>
-  <button onclick="mostrarSeccion('ventas')">Ventas</button>
-</nav>
+    <header>
+        <div class="logo">
+            <i class="fas fa-store" style="color: var(--primary); font-size: 1.5rem;"></i>
+            <h1>Mi Abarrotes</h1>
+        </div>
+        <nav>
+            <button onclick="cambiarSeccion('ventas')" class="active" id="nav-ventas">
+                <i class="fas fa-cash-register"></i> Punto de Venta
+            </button>
+            <button onclick="cambiarSeccion('inventario')" id="nav-inventario">
+                <i class="fas fa-boxes"></i> Inventario
+            </button>
+            <button onclick="cambiarSeccion('reportes')" id="nav-reportes">
+                <i class="fas fa-chart-bar"></i> Reportes
+            </button>
+        </nav>
+    </header>
 
-<hr>
+    <div class="container">
+        
+        <!-- SECCIÓN: PUNTO DE VENTA -->
+        <section id="ventas" class="seccion active">
+            <div class="pos-layout">
+                <!-- Productos -->
+                <div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-shopping-basket"></i> Productos Disponibles</h2>
+                            <input type="text" id="buscar-producto" placeholder="Buscar producto..." 
+                                   style="max-width: 250px;" onkeyup="filtrarProductos()">
+                        </div>
+                        <div id="display-productos" class="productos-grid">
+                            <!-- Los productos se generan aquí -->
+                        </div>
+                    </div>
+                </div>
 
-<section id="seccion-productos">
-  <h2>Agregar Producto</h2>
+                <!-- Carrito -->
+                <div class="carrito">
+                    <div class="carrito-header">
+                        <h2><i class="fas fa-shopping-cart"></i> Carrito</h2>
+                        <button class="btn btn-danger btn-sm" onclick="vaciarCarrito()" style="padding: 8px 12px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="carrito-items" id="lista-carrito">
+                        <div class="carrito-vacio">
+                            <i class="fas fa-shopping-basket" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                            <p>Tu carrito está vacío</p>
+                            <p style="font-size: 0.85rem;">Haz click en un producto para agregar</p>
+                        </div>
+                    </div>
+                    <div class="carrito-footer">
+                        <div class="total-row">
+                            <span>Subtotal:</span>
+                            <span id="subtotal">$0.00</span>
+                        </div>
+                        <div class="total-row">
+                            <span>IVA (16%):</span>
+                            <span id="iva">$0.00</span>
+                        </div>
+                        <div class="total-row" style="border-top: 1px solid #374151; padding-top: 10px; margin-top: 10px;">
+                            <span class="total-final">Total:</span>
+                            <span class="total-final" id="total-venta">$0.00</span>
+                        </div>
+                        <button class="btn btn-cobrar" onclick="finalizarVenta()">
+                            <i class="fas fa-credit-card"></i> Cobrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-  <input type="text" id="nombre" placeholder="Nombre">
-  <input type="number" id="precio" placeholder="Precio" step="0.01">
-  <input type="number" id="costo" placeholder="Costo" step="0.01">
-  <input type="number" id="stock" placeholder="Stock">
+        <!-- SECCIÓN: INVENTARIO -->
+        <section id="inventario" class="seccion">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-plus-circle"></i> Agregar/Editar Producto</h2>
+                </div>
+                <div class="grid-form">
+                    <div class="form-group">
+                        <label>Nombre del Producto</label>
+                        <input type="text" id="prod-nombre" placeholder="Ej: Coca Cola 600ml">
+                    </div>
+                    <div class="form-group"> <label>Precio de Venta ($)</label> <input type="number" id="prod-precio" placeholder="0.00" step="0.01"> </div> <div class="form-group"> <label>Costo ($) - Opcional</label> <input type="number" id="prod-costo" placeholder="0.00" step="0.01"> </div> <div class="form-group"> <label>Cantidad en Stock</label> <input type="number" id="prod-stock" placeholder="0"> </div> <input type="hidden" id="prod-id"> <button class="btn btn-primary" onclick="guardarProducto()"> <i class="fas fa-save"></i> Guardar </button> </div> </div>
+                            <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-list"></i> Productos en Inventario</h2>
+            </div>
+            <div class="tabla-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Precio Venta</th>
+                            <th>Costo</th>
+                            <th>Stock</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-inventario">
+                        <!-- Las filas se generan aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
 
-  <button id="btnGuardar">Guardar</button>
+    <!-- SECCIÓN: REPORTES -->
+    <section id="reportes" class="seccion">
+        <div class="resumen-grid">
+            <div class="resumen-card">
+                <h3 id="ventas-hoy">0</h3>
+                <p>Ventas Hoy</p>
+            </div>
+            <div class="resumen-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                <h3 id="productos-vendidos">0</h3>
+                <p>Productos Vendidos</p>
+            </div>
+            <div class="resumen-card" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                <h3 id="ganancia-hoy">$0.00</h3>
+                <p>Ganancia Neta</p>
+            </div>
+        </div>
 
-  <hr>
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-history"></i> Historial de Ventas Recientes</h2>
+                <button class="btn btn-primary btn-sm" onclick="exportarReportes()">
+                    <i class="fas fa-download"></i> Exportar
+                </button>
+            </div>
+            <div class="tabla-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID Venta</th>
+                            <th>Fecha/Hora</th>
+                            <th>Productos</th>
+                            <th>Total</th>
+                            <th>Ganancia</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-ventas">
+                        <!-- Las ventas se generan aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
 
-  <h3>Lista de Productos</h3>
-  <div id="listaProductos"></div>
-</section>
+</div>
 
-<section id="seccion-ventas" style="display:none;">
-  <h2>Registrar Venta</h2>
+<!-- MODAL DE COBRO -->
+<div class="modal" id="modal-cobro">
+    <div class="modal-content">
+        <i class="fas fa-check-circle" style="color: var(--primary); font-size: 4rem; margin-bottom: 1rem;"></i>
+        <h3>¡Venta Exitosa!</h3>
+        <p>Total cobrado:</p>
+        <div class="modal-total" id="modal-total">$0.00</div>
+        <button class="btn btn-primary" onclick="cerrarModal()" style="width: 100%;">
+            Nueva Venta
+        </button>
+    </div>
+</div>
 
-  <select id="productoVenta"></select>
-  <input type="number" id="cantidadVenta" placeholder="Cantidad">
-
-  <button id="btnVender">Vender</button>
-
-  <hr>
-
-  <h3>Ventas del día</h3>
-  <div id="listaVentas"></div>
-
-  <h3>Resumen</h3>
-  <div id="resumenVentas"></div>
-</section>
-
-    <!-- Supabase CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <!-- Scripts propios -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <script src="js/supabaseClient.js"></script>
+    
     <script src="js/productos.js"></script>
 
 </body>
