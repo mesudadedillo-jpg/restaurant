@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Restaurante App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<h1>Panel Restaurante</h1>
+
+<nav>
+  <button onclick="mostrarSeccion('productos')">Productos</button>
+  <button onclick="mostrarSeccion('ventas')">Ventas</button>
+</nav>
+
+<hr>
+
+<section id="seccion-productos">
+  <h2>Agregar Producto</h2>
+
+  <input type="text" id="nombre" placeholder="Nombre">
+  <input type="number" id="precio" placeholder="Precio" step="0.01">
+  <input type="number" id="costo" placeholder="Costo" step="0.01">
+  <input type="number" id="stock" placeholder="Stock">
+
+  <button id="btnGuardar">Guardar</button>
+
+  <hr>
+
+  <h3>Lista de Productos</h3>
+  <div id="listaProductos"></div>
+</section>
+
+<section id="seccion-ventas" style="display:none;">
+  <h2>Registrar Venta</h2>
+
+  <select id="productoVenta"></select>
+  <input type="number" id="cantidadVenta" placeholder="Cantidad">
+
+  <button id="btnVender">Vender</button>
+
+  <hr>
+
+  <h3>Ventas del día</h3>
+  <div id="listaVentas"></div>
+
+  <h3>Resumen</h3>
+  <div id="resumenVentas"></div>
+</section>
+
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Scripts propios -->
+    <script src="js/supabaseClient.js"></script>
+    <script src="js/productos.js"></script>
+
+</body>
+</html>
