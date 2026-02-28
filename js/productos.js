@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function activarTiempoReal() {
-  // Escuchamos cambios en la base de datos de Supabase
+  // Escuchamos cambios en la base de datos de Supabase usando el alias 'db'
   const canal = db.channel("cambios-en-vivo");
 
   canal
@@ -30,7 +30,7 @@ function activarTiempoReal() {
       { event: "*", schema: "public", table: "productos" },
       (payload) => {
         console.log("Cambio detectado en productos:", payload);
-        cargarProductos(); // Se ejecuta solo, sin refrescar la página
+        cargarProductos(); 
       }
     )
     .on(
@@ -38,14 +38,14 @@ function activarTiempoReal() {
       { event: "*", schema: "public", table: "ventas" },
       (payload) => {
         console.log("Cambio detectado en ventas:", payload);
-        cargarVentas(); // Actualiza totales y lista de ventas al instante
+        cargarVentas(); 
       }
     )
     .subscribe();
 }
 
 async function cargarProductos() {
-  const { data, error } = await db // <--- Cambiado de supabase a db
+  const { data, error } = await db // <--- Unificado a db
     .from("productos")
     .select("*")
     .order("created_at", { ascending: false });
@@ -62,7 +62,7 @@ async function cargarProductos() {
     const ganancia = p.precio - p.costo;
 
     const item = document.createElement("div");
-    item.className = "producto-item"; // Útil para tu CSS
+    item.className = "producto-item";
     item.innerHTML = `
       <strong>${p.nombre}</strong>
       | Precio: $${p.precio}
@@ -80,7 +80,7 @@ async function cargarProductos() {
 }
 
 async function cargarVentas() {
-  const { data, error } = await supabase
+  const { data, error } = await db // <--- Unificado a db
     .from("ventas")
     .select("*, productos(nombre, costo)");
 
@@ -96,7 +96,6 @@ async function cargarVentas() {
 
   data.forEach(v => {
     totalVentas += v.total;
-    // Verificamos que la relación con productos exista para evitar errores
     if (v.productos) {
         totalCostos += v.productos.costo * v.cantidad;
     }
@@ -125,12 +124,11 @@ async function crearProducto() {
   const costo = parseFloat(document.getElementById("costo").value);
   const stock = parseInt(document.getElementById("stock").value);
 
-  // Validaciones básicas
   if (!nombre || isNaN(precio) || isNaN(costo) || isNaN(stock)) {
       return alert("Por favor completa todos los campos.");
   }
 
-  const { error } = await supabase
+  const { error } = await db // <--- Unificado a db
     .from("productos")
     .insert([{ nombre, precio, costo, stock }]);
 
@@ -149,8 +147,7 @@ async function registrarVenta() {
       return alert("Datos de venta inválidos");
   }
 
-  // Obtenemos el producto para verificar stock
-  const { data: producto, error: errProd } = await supabase
+  const { data: producto, error: errProd } = await db // <--- Unificado a db
     .from("productos")
     .select("*")
     .eq("id", producto_id)
@@ -164,14 +161,13 @@ async function registrarVenta() {
 
   const total = producto.precio * cantidad;
 
-  // 1. Insertar la venta
-  const { error: errVenta } = await supabase.from("ventas")
+  const { error: errVenta } = await db // <--- Unificado a db
+    .from("ventas")
     .insert([{ producto_id, cantidad, total }]);
 
   if (errVenta) return alert("Error al registrar venta");
 
-  // 2. Actualizar stock
-  await supabase.from("productos")
+  await db.from("productos") // <--- Unificado a db
     .update({ stock: producto.stock - cantidad })
     .eq("id", producto_id);
 
@@ -181,7 +177,7 @@ async function registrarVenta() {
 async function eliminarProducto(id) {
   if (!confirm("¿Deseas eliminar este producto de la base de datos global?")) return;
 
-  const { error } = await supabase
+  const { error } = await db // <--- Unificado a db
     .from("productos")
     .delete()
     .eq("id", id);
@@ -203,4 +199,3 @@ function limpiarCampos() {
   document.getElementById("costo").value = "";
   document.getElementById("stock").value = "";
 }
-
